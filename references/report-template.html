@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scripts to Functions audit: Example Store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;550;650;700&display=swap" rel="stylesheet">
+<style>
+/* Report styles modelled on Shopify Polaris (admin look): Inter, white cards on
+   a light grey page, 12px radius, Polaris tone colours for badges and banners.
+   Copy this block unchanged into the report's <style>. Do not add colours. */
+:root {
+  --bg: #f1f1f1;
+  --surface: #ffffff;
+  --surface-2: #f7f7f7;
+  --surface-3: #f3f3f3;
+  --text: #303030;
+  --text-2: #616161;
+  --text-3: #8a8a8a;
+  --border: #e3e3e3;
+  --border-2: #ebebeb;
+  --fill: #303030;
+  --link: #005bd3;
+  --ok-bg: #affebf;   --ok-tx: #014b40;
+  --bad-bg: #fedad9;  --bad-tx: #8e0b21;
+  --warn-bg: #ffd6a4; --warn-tx: #5e4200;
+  --att-bg: #ffef9d;  --att-tx: #4f4700;
+  --info-bg: #e0f0ff; --info-tx: #00527c;
+  --mute-bg: #e3e3e3; --mute-tx: #616161;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 0 0 rgba(26,26,26,.07), inset 0 0 0 1px rgba(0,0,0,.08);
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 450 14px/20px var(--font); }
+.page { max-width: 998px; margin: 0 auto; padding: 24px 16px 64px; }
+.page-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+.page-head h1 { font-size: 20px; line-height: 24px; font-weight: 700; margin: 0 0 4px; }
+.page-head .sub { color: var(--text-2); margin: 0; }
+h2 { font-size: 14px; line-height: 20px; font-weight: 650; margin: 0 0 12px; }
+h3 { font-size: 14px; line-height: 20px; font-weight: 650; margin: 0; }
+p { margin: 0 0 12px; max-width: 72ch; }
+p:last-child { margin-bottom: 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { font: 500 12.5px/18px ui-monospace, "SF Mono", Menlo, monospace; background: var(--surface-3); padding: 1px 5px; border-radius: 6px; }
+.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; }
+.card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.card-head h2, .card-head h3 { margin: 0; }
+.muted { color: var(--text-2); }
+.small { font-size: 12px; line-height: 16px; }
+
+/* badges */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-sm); font-size: 12px; line-height: 16px; font-weight: 550; white-space: nowrap; background: var(--mute-bg); color: var(--mute-tx); }
+.badge.ok { background: var(--ok-bg); color: var(--ok-tx); }
+.badge.bad { background: var(--bad-bg); color: var(--bad-tx); }
+.badge.warn { background: var(--warn-bg); color: var(--warn-tx); }
+.badge.att { background: var(--att-bg); color: var(--att-tx); }
+.badge.info { background: var(--info-bg); color: var(--info-tx); }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* summary numbers */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px; }
+.stat { background: var(--surface-2); border-radius: var(--radius-sm); padding: 12px; }
+.stat .n { font-size: 24px; line-height: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--text-2); font-size: 12px; line-height: 16px; }
+
+/* banners */
+.banner { border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; background: var(--info-bg); color: var(--info-tx); }
+.banner.bad { background: var(--bad-bg); color: var(--bad-tx); }
+.banner.warn { background: var(--warn-bg); color: var(--warn-tx); }
+.banner.ok { background: var(--ok-bg); color: var(--ok-tx); }
+.banner strong { font-weight: 650; }
+
+/* tables (Polaris IndexTable look) */
+.table-wrap { overflow-x: auto; margin: 0 -16px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 20px; }
+th { text-align: left; font-weight: 550; color: var(--text-2); background: var(--surface-2); padding: 8px 16px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 10px 16px; border-bottom: 1px solid var(--border-2); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* definition rows inside a card */
+.rows { display: grid; grid-template-columns: 180px 1fr; gap: 0; border-top: 1px solid var(--border-2); }
+.rows > dt, .rows > dd { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--border-2); }
+.rows > dt { color: var(--text-2); padding-right: 16px; }
+.rows > dd:last-of-type, .rows > dt:last-of-type { border-bottom: none; }
+
+/* steps and checklists */
+ol.steps { margin: 0; padding-left: 20px; }
+ol.steps li { margin-bottom: 8px; padding-left: 4px; }
+ul.check { list-style: none; margin: 0; padding: 0; }
+ul.check li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-2); }
+ul.check li:last-child { border-bottom: none; }
+ul.check li::before { content: ""; width: 16px; height: 16px; margin-top: 2px; border: 1.5px solid var(--text-3); border-radius: 4px; }
+.expect { color: var(--text-2); }
+
+/* split fix lists */
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.split { margin-bottom: 16px; }
+.split .card { margin-bottom: 0; }
+
+/* collapsible developer detail */
+details { border-top: 1px solid var(--border-2); margin-top: 12px; padding-top: 12px; }
+summary { cursor: pointer; font-weight: 550; }
+details[open] summary { margin-bottom: 8px; }
+.card > details:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+
+.foot { color: var(--text-3); font-size: 12px; line-height: 16px; margin-top: 24px; }
+
+@media (max-width: 640px) {
+  .split { grid-template-columns: 1fr; }
+  .rows { grid-template-columns: 1fr; }
+  .rows > dt { padding-bottom: 0; border-bottom: none; }
+}
+@media print {
+  body { background: #fff; }
+  .card { box-shadow: none; border: 1px solid var(--border); break-inside: avoid; }
+}
+
+/* code blocks (appendix) */
+pre { margin: 0; padding: 12px; background: var(--surface-3); border-radius: var(--radius-sm); overflow-x: auto; font: 500 12px/18px ui-monospace, "SF Mono", Menlo, monospace; white-space: pre; }
+</style>
+</head>
+<body>
+<!--
+HOW TO USE THIS TEMPLATE (scripts-to-functions-audit)
+- Content and section order come from references/output-template.md (Variant B shown here).
+  This file only sets the look. Keep the <style> block exactly as it is. No new colours,
+  icons, emoji, gradients or images. No labels above headings.
+- Replace the example content (a made-up store, example-store.com). Delete this comment block
+  and the "example" banner in the real report.
+- Badge tones are fixed:
+    Script/rule status: LOST = badge bad · PARTIAL = badge warn · REPLACED = badge ok ·
+                        NOT APPLICABLE = badge (plain)
+    Confidence:         Confirmed = badge info · Likely = badge att · Unverified = badge (plain)
+    Priority:           P1 / P2 / P3 = badge (plain), with the words "this week / this month / backlog"
+    Owner:              PM = badge info · Developer = badge (plain) · Merchant decision = badge att
+    Coverage result:    Yes = badge ok · No = badge bad
+- Use only the classes in the style block. No inline style attributes.
+- The fold map (what is visible, what goes inside <details>) is in references/output-template.md,
+  "Readability rules". The Markdown copy keeps the same order.
+- Repeated blocks are marked REPEAT. Sections with nothing to report keep their card with "None".
+- READ IN FIVE MINUTES: everything visible without clicking (fix-first banner, summary,
+  priority list or top fixes, and "PM can do this") must read in about 5 minutes, roughly
+  1,500 words. Put everything long inside <details>: evidence, rule details, developer specs,
+  coverage check, sources, store details, glossary and code. Never cut content to save space,
+  fold it.
+- Order on screen: page head, fix-first banner, summary, then the rest. Store details go in a
+  collapsed card after the summary.
+- Never use an ID alone. Write the plain name first, ID after:
+  "Hide invoice payment for non-trade customers (D3)", not "D3".
+- Summaries are bullets, one idea each. No paragraph longer than 3 sentences.
+
+- Variant A (nothing to migrate): use page-head, a banner ok with the result line, the
+  "What I checked" table, "Things the PM may want to check" and "Sources and method". Nothing else.
+
+-->
+<div class="page">
+<div class="page-head">
+  <div>
+    <h1>Scripts to Functions audit: Example Store</h1>
+    <p class="sub">example-store.com · admin handle example-store · Shopify Plus · 4 November 2026 · Browser run (Claude in Chrome)</p>
+  </div>
+  <div class="badges"><span class="badge bad">1 lost</span><span class="badge warn">1 partial</span><span class="badge ok">1 replaced</span></div>
+</div>
+
+<div class="banner">This is an example report. The store, its Scripts and every number in it are made up.</div>
+
+<div class="banner bad"><strong>Fix first:</strong> VIP customers have paid full price since June 30, 2026. The Script that gave them 15% off stopped running and nothing replaced it.</div>
+
+<!-- 1. Summary -->
+<div class="card">
+  <div class="card-head"><h2>Summary</h2><span class="badge">Read-only: nothing was changed</span></div>
+  <ul>
+    <li>Shopify turned off all Scripts on June 30, 2026. This store had 2 Scripts with 3 rules.</li>
+    <li>VIP customers have lost their 15% off. Nothing replaced it.</li>
+    <li>Discount codes now stack with the VIP price in a way they didn't before.</li>
+    <li>Do this week: set up the VIP automatic discount (F1, 20 minutes in the admin).</li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><div class="n">1</div><div class="l">Lost</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">Partial</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">Replaced</div></div>
+    <div class="stat"><div class="n">1 · 1 · 0</div><div class="l">PM fixes · developer specs · gaps</div></div>
+  </div>
+</div>
+
+<!-- Store details (the table at the top of output-template.md) -->
+<div class="card">
+  <details><summary>Store details and words used in this report</summary>
+  <dl class="rows">
+    <dt>Store</dt><dd>Example Store</dd>
+    <dt>Admin handle</dt><dd>example-store (read from the store switcher)</dd>
+    <dt>Website</dt><dd>example-store.com · example-store.myshopify.com</dd>
+    <dt>Plan</dt><dd>Shopify Plus</dd>
+    <dt>Store currency</dt><dd>USD</dd>
+    <dt>Shipping setup</dt><dd>Shipping profiles</dd>
+    <dt>Shopify-built apps policy</dt><dd>Optional alternatives only (default)</dd>
+  </dl>
+  <p class="small"><strong>Shopify Script:</strong> a small program that changed prices, shipping or payment options at checkout. All were turned off on June 30, 2026. <strong>Rule:</strong> one thing a Script did. <strong>Shopify Function:</strong> Shopify's replacement for Scripts, built by a developer as a custom app (Shopify Plus only). <strong>Native setting:</strong> something set up in the Shopify admin without an app. <strong>Test checkout:</strong> going through checkout up to the payment step and leaving without paying.</p>
+  </details>
+</div>
+
+<!-- 2. Script inventory -->
+<div class="card">
+  <h2>Script inventory</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th>Script</th><th>Type</th><th>Published before June 30</th><th>Code source</th><th>Rules</th><th>Status</th><th>Confidence</th></tr></thead>
+    <tbody>
+      <!-- REPEAT one row per Script -->
+      <tr><td>S1</td><td>VIP pricing</td><td>Line item</td><td>Yes</td><td>Script Editor</td><td>S1.R1, S1.R2</td><td><span class="badge bad">Lost</span></td><td><span class="badge info">Confirmed</span></td></tr>
+      <tr><td>S2</td><td>Hide express for PO boxes</td><td>Shipping</td><td>Yes</td><td>Report link</td><td>S2.R1</td><td><span class="badge ok">Replaced</span></td><td><span class="badge att">Likely</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">Scripts report counts: Product discounts 2, Shipping 1, Payment gateways 0. All 3 match the rules above.</p>
+</div>
+
+<!-- 3. Priority list -->
+<div class="card">
+  <h2>Priority list</h2>
+  <p class="muted">Lost and partial rules only, ranked by revenue impact.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Priority</th><th>Rule</th><th>What shoppers lost</th><th>Orders affected (90 days)</th><th>Fix</th><th>Owner</th></tr></thead>
+    <tbody>
+      <!-- REPEAT one row per LOST or PARTIAL rule; plain name first, ID after -->
+      <tr><td><span class="badge">P1 this week</span></td><td>VIP 15% off (S1.R1)</td><td>15% off for customers tagged VIP</td><td class="num">412 of 3,950 (Analytics)</td><td>VIP automatic discount (F1)</td><td><span class="badge info">PM</span></td></tr>
+      <tr><td><span class="badge">P2 this month</span></td><td>Block codes for VIP (S1.R2)</td><td>Codes now stack with the VIP price</td><td class="num">Not checked</td><td>Stop codes stacking with the VIP price (D1)</td><td><span class="badge">Developer</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="small muted">Inputs: last 90 days of Analytics (Aug 6 to Nov 3, 2026), used as a stand-in for before June 30.</p>
+  <details><summary>How the priority was scored</summary>
+  <!-- The full rubric table from references/priority-rubric.md section 4, then the input notes -->
+  <div class="table-wrap"><table>
+    <thead><tr><th>Rank</th><th>Rule</th><th>Status</th><th>I</th><th>Flags</th><th>Adj.</th><th>Score</th><th>Priority</th><th>Why (one line)</th><th>Fix type</th><th>Fix ID</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>S1.R1 VIP 15% off</td><td>LOST</td><td class="num">3</td><td>broken promise</td><td class="num">0</td><td class="num">4</td><td>P1</td><td>VIP program; 10% of orders</td><td>PM</td><td>F1</td></tr>
+      <tr><td class="num">2</td><td>S1.R2 Block codes for VIP</td><td>LOST</td><td class="num">1</td><td>margin leak</td><td class="num">0</td><td class="num">2</td><td>P2</td><td>Codes stack with VIP price</td><td>Developer</td><td>D1</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Input notes: VIP share from Analytics (412 of 3,950 orders). Code share not checked, scored 1 (Unverified).</p>
+  </details>
+</div>
+
+<!-- 4. Script-by-script findings: REPEAT one card per rule -->
+<h2>Script-by-script findings</h2>
+<div class="card">
+  <div class="card-head"><h3>S1.R1 VIP 15% off</h3><div class="badges"><span class="badge bad">Lost</span><span class="badge info">Confirmed</span></div></div>
+  <p>Customers tagged VIP got 15% off every product except gift cards. The discount showed as a lower line price with the message "VIP price".</p>
+  <dl class="rows">
+    <dt>Status today</dt><dd>Lost. Nothing gives VIP customers 15% off any more.</dd>
+    <dt>Fix</dt><dd>VIP automatic discount (F1), test T1</dd>
+  </dl>
+  <details><summary>Rule details and evidence</summary>
+    <dl class="rows">
+      <dt>Who</dt><dd>Signed-in customers tagged VIP</dd>
+      <dt>What</dt><dd>15% off each eligible line</dd>
+      <dt>When</dt><dd>Always, cart and checkout</dd>
+      <dt>Was live before June 30</dt><dd>Yes (published in Script Editor)</dd>
+      <dt>Evidence</dt><dd>Discounts list (12 discounts, none for VIP) · Markets &gt; Rollouts (none) · Apps (no discount app)</dd>
+    </dl>
+  </details>
+</div>
+
+<!-- 5 and 6. Fix lists -->
+<div class="split">
+  <div class="card">
+    <div class="card-head"><h2>PM can do this</h2><span class="badge info">1 fix</span></div>
+    <p class="small muted">Make these changes only after the merchant approves. If a label looks different, stop and ask your agency lead.</p>
+    <!-- REPEAT one block per F# -->
+    <h3>F1. VIP automatic discount · fixes S1.R1 · P1</h3>
+    <ol class="steps">
+      <li>Customers &gt; Segments: create a segment for customers tagged VIP.</li>
+      <li>Discounts &gt; Create discount &gt; Amount off products &gt; Automatic.</li>
+      <li>15%, all products except gift cards; eligibility: the VIP segment.</li>
+      <li>Combinations: match what the merchant wants (see W1).</li>
+    </ol>
+    <p class="small">Check it worked: run T1. How close to the old Script: close. Shoppers now see a discount line instead of a lower price.</p>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Needs a developer</h2><span class="badge">1 spec</span></div>
+    <p class="small muted">Specs only, no code. Custom Functions need a custom app from the Dev Dashboard and Shopify Plus.</p>
+    <!-- Only if the merchant prefers apps: <p class="small">The merchant prefers apps where possible. Your agency evaluates third-party apps separately; this audit doesn't.</p> -->
+    <!-- REPEAT one block per D#; all 14 fields go inside the details element -->
+    <h3>D1. Stop codes stacking with the VIP price · P2</h3>
+    <p>Goal: a VIP customer can't add a discount code on top of the VIP discount.</p>
+    <details><summary>Full developer spec (14 fields)</summary>
+      <dl class="rows">
+        <dt>Function API and target</dt><dd>Discount Function API · <code>cart.lines.discounts.generate.run</code></dd>
+        <dt>Inputs needed</dt><dd>Buyer customer tags, entered discount codes · query cost 4 of 30</dd>
+        <dt>Logic</dt><dd>1. If the buyer is tagged VIP and a code is entered, reject the code with the message below.</dd>
+        <dt>Shopper message</dt><dd>"Codes can't be combined with VIP pricing."</dd>
+      </dl>
+    </details>
+  </div>
+</div>
+
+<!-- 7. Gaps -->
+<div class="card"><h2>Gaps</h2><p>None.</p></div>
+
+<!-- 8. Test-checkout checklist -->
+<div class="card">
+  <h2>Test-checkout checklist</h2>
+  <p class="small muted">Go up to the payment step and leave. Never pay. Use the store's preview or a test customer the merchant gives you.</p>
+  <ul class="check">
+    <!-- REPEAT one item per T# and TW# -->
+    <li><div><strong>T1.</strong> Sign in as a VIP test customer, add any non-gift-card product, go to checkout. <span class="expect">Expected: 15% off the line, discount named "VIP 15%".</span></div></li>
+    <li><div><strong>T2.</strong> Same customer, enter code WELCOME10. <span class="expect">Expected: the code is refused.</span></div></li>
+  </ul>
+</div>
+
+<!-- 9. Store-wide warnings -->
+<div class="card">
+  <h2>Store-wide warnings</h2>
+  <p><strong>W1. Discounts stack differently now.</strong> Scripts applied on top of any discount. Native and Function discounts follow each discount's Combinations setting, so check every discount the merchant creates.</p>
+</div>
+
+<!-- 10. Things the PM must check -->
+<div class="card">
+  <h2>Things the PM must check</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th>What to check</th><th>Where</th><th>Why</th><th>Related</th></tr></thead>
+    <tbody><tr><td>C-PM1</td><td>How many customers are tagged VIP</td><td>Customers, filter by tag (the PM does this)</td><td>Sizes the P1 fix</td><td>S1.R1</td></tr></tbody>
+  </table></div>
+</div>
+
+<!-- 11. Coverage check -->
+<div class="card">
+  <details><summary>Coverage check</summary>
+  <div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Check</th><th>Result</th></tr></thead>
+    <tbody>
+      <!-- REPEAT CV1 to CV15 -->
+      <tr><td>CV1</td><td>Script count (2 of 2)</td><td><span class="badge ok">Yes</span></td></tr>
+      <tr><td>CV9</td><td>Every rule has a test</td><td><span class="badge ok">Yes</span></td></tr>
+    </tbody>
+  </table></div>
+  </details>
+</div>
+
+<!-- 12. Sources and method -->
+<div class="card">
+  <details><summary>Sources and method</summary>
+  <p>Pages read: Scripts report, Script Editor, Discounts, Markets &gt; Rollouts, Settings &gt; Shipping and delivery, Settings &gt; Payments, Apps, Analytics &gt; Reports. Facts last verified against Shopify documentation on 2026-11-04.</p>
+  <p>No settings, discounts, apps, carts or orders were changed during this audit.</p>
+  </details>
+</div>
+
+<!-- Appendix A. Original Script code -->
+<div class="card">
+  <h2>Appendix: original Script code</h2>
+  <p class="small muted">Reference only. These Scripts no longer run.</p>
+  <details><summary>S1 VIP pricing (Script Editor)</summary>
+<pre>customer = Input.cart.customer
+if customer &amp;&amp; customer.tags.include?("VIP")
+  Input.cart.line_items.each do |line|
+    next if line.variant.product.gift_card?
+    line.change_line_price(line.line_price * 0.85, message: "VIP price")
+  end
+end
+Output.cart = Input.cart</pre>
+  </details>
+</div>
+
+<p class="foot">Scripts to Functions audit · example-store · 2026-11-04 · Read-only</p>
+</div>
+</body>
+</html>
